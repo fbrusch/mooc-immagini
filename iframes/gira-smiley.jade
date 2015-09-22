@@ -1,0 +1,76 @@
+html
+    head
+        meta(charset="UTF8")
+        link(rel="stylesheet", href="app.css")
+        link(href='https://fonts.googleapis.com/css?family=Open+Sans',rel='stylesheet',type='text/css')
+        style
+            :less
+                body {
+                    font-family: "Open Sans";
+                }
+                #console > {font-size:20px}
+        script(src="lodash.js")
+        script(src="jquery.js")
+        script(src="node-event-emitter.js")
+        script(src="ExsCheck.js")
+        script(src="app.js")
+    body
+        //-your-image(data-data="smiley",data-console="true")
+        div
+            #image(style="display:inline-block")
+            //#values(style="display:inline-block")
+        #console(style="margin:10px;font-size:20px")
+        #exsCheck
+        script
+            :coffeescript
+                _ = require('lodash')
+                $ = require('jquery')
+                ExsCheck = require 'ExsCheck'
+                EventEmitter = require 'node-event-emitter'
+                {Matrix, Image, Console, SS, _e, imgsData} = window.images
+                window.metronome = new EventEmitter()
+                a = 0
+                setInterval (-> window.metronome.emit "tick", a++), 1000
+
+                cns = $("#console")[0]
+                img = $("#image")[0]
+                exsCheck = $("#exsCheck")[0]
+
+                rows = _.cloneDeep(imgsData["smiley"])
+
+                ss = new SS(rows)
+
+                tests =  
+                    [
+                        {
+                            display: "Fai in modo che lo smiley sorrida verso destra.."
+                            success: _("Bravissimo!!".split('')).reverse().value().join('')
+                            test: -> 
+                                cols = rows[0].length
+                                for r, y in imgsData["smiley"]
+                                    for v, x  in r
+                                        console.log v, ss.state.rows[y][x]
+                                        if v isnt ss.state.rows[y][cols-x-1] then return false 
+                                return true
+                        }
+                    ]
+
+                render = =>
+                    React.render (_e Image, 
+                            handleClick: (coords) -> 
+                                ss.invertPixel coords[0], coords[1] 
+                            selectedPixel: ss.state.selectedPixel
+                            rows: ss.state.rows )
+                        , img
+                    React.render (_e ExsCheck, 
+                                tests: tests
+                        ), exsCheck 
+
+
+
+                ss.on "error", (e) -> console.log e
+
+                ss.on "change", -> 
+                    render()
+
+                render()

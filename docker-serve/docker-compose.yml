@@ -1,0 +1,17 @@
+livereload:
+    build: . 
+    dockerfile: livereload.Dockerfile
+    volumes:
+        - ../dist:/watch_dir
+    expose: 
+        - "35729"
+nginx:
+    image: nginx
+    links:
+        - livereload
+    volumes:
+        - ../dist:/usr/share/nginx/html:ro
+        - ./default.conf:/etc/nginx/conf.d/default.conf
+    environment:
+        - VIRTUAL_HOST=immagini2.localhost
+

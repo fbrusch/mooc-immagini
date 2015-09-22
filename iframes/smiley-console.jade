@@ -1,0 +1,82 @@
+html
+    head
+        link(rel="stylesheet", href="app.css")
+        style
+            :less
+                #console > {font-size:20px}
+    body
+        //-your-image(data-data="smiley",data-console="true")
+        p Annerisci l'angolo in alto a sinistra dello smiley...
+        div
+            #image(style="display:inline-block")
+            //#values(style="display:inline-block")
+        #console(style="margin:10px;font-size:20px")
+        #exsCheck
+        script(src="app.js")
+        script
+            :coffeescript
+                {Matrix, FontAwesome, $, React, Image, Console, SS, _e, imgsData} = window.images
+
+                cns = $("#console")[0]
+                img = $("#image")[0]
+                exsCheck = $("#exsCheck")[0]
+                values = $("#values")[0]
+
+                rows = imgsData["smiley"]
+
+                ss = new SS(rows)
+
+                ss.on "error", (e) -> console.log e
+
+                tests =  
+                    [
+                        {
+                            display: "Il pixel in alto a sinistra deve essere nero"
+                            test: -> ss.state.rows[0][0] is 0
+                        }
+                    ]
+
+                ok = React.createClass 
+                    render: -> 
+                        _e FontAwesome,
+                            name: "check", 
+                            style: {color:"green"}
+
+                ko = React.createClass
+                    render: ->
+                        _e FontAwesome,
+                            name: "check"
+                            style: {color:"red"}
+
+                ExsCheck = React.createClass 
+                    render: ->
+                        {span, p, div, i} = React.DOM
+                        div null, 
+                            @props.tests.map (x) ->
+                                div null,
+                                    (span null, x.display) 
+                                    if x.test() then (_e ok) else (_e ko)
+
+
+                render = =>
+                    React.render (_e Image, 
+                            handleClick: (coords) -> alert coords  
+                            selectedPixel: ss.state.selectedPixel
+                            rows: ss.state.rows )
+                        , img
+                    React.render (_e ExsCheck, 
+                                tests: tests
+                        ), exsCheck 
+                    React.render (_e Matrix, {rows: ss.state.rows}), values
+
+
+                React.render (_e Console, 
+                    onEnter: (x) -> 
+                        ss.exec x
+                    onMap: (x) ->
+                        ss.map x
+                ), cns
+
+                ss.on "change", -> 
+                    render()
+                render()

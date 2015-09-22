@@ -1,0 +1,167 @@
+html
+    head
+        meta(charset="UTF8")
+        link(rel="stylesheet", href="app.css")
+        style
+            :less
+                #console {width:50%}
+                #console > {width:50%; font-size:20px}
+                body {
+                    font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    color: rgb(76, 76, 76);
+                }
+                .input {
+                    width: 4em;
+                    }
+                .question {
+                    margin:5px;
+                    }
+                .check {
+                    display: inline-block;
+                    }
+                .questions {
+                    margin-top: 10px;
+                    }
+                #console-display {
+                    border: 2px dotted black;
+                    height: 3em;
+                    width:50%;
+                    padding:10px;
+                    background-color: lightgrey;
+                    font-family: monospace;
+
+                    }
+                
+        link(rel="stylesheet",href="font-awesome/css/font-awesome.min.css")
+        script(src="lodash.js")
+        script(src="jquery.js")
+        script(src="node-event-emitter.js")
+        script(src="ExsCheck.js")
+        script(src="ConsoleDisplay.js")
+        script(src="app.js")
+    body
+        div
+            #image(style="display:inline-block")
+        #console(style="font-size:20px")
+        #console-display
+        div.questions
+            div.question
+                span Qual è la componente di rosso del pixel in alto a sinistra?
+                input.input#rosso-alto-sinistra(type="number")
+                .check#check-rosso-alto-sinistra
+            div.question
+                span Qual è la componente di verde del pixel in basso a destra?
+                input.input#verde-basso-destra(type="number")
+                .check#check-verde-basso-destra
+
+        #exsCheck
+        script
+
+            :coffeescript
+                _ = require('lodash')
+                $ = require('jquery')
+                ExsCheck = require 'ExsCheck'
+
+                {Matrix, Image, Console, SS, _e, Console2, imgsData} = window.images
+
+                a = 0
+
+                cns = $("#console")[0]
+                consoleDisplay = $("#console-display")[0]
+                img = $("#image")[0]
+                exsCheck = $("#exsCheck")[0]
+
+                randomColor = -> Math.round(Math.random()*255) for i in [0,1,2]
+                rows = ((randomColor() for i in [1..8]) for j in [1..8])
+                
+                ss = new SS(rows)
+                ss.state.lines = []
+
+                tests = [] 
+                #    //-[
+                #        //-{
+                #            //-display: "I pixel dello smiley devono essere invertiti"
+                #            //-test: -> 
+                #                //-for r, y in imgsData["smiley"]
+                #                    //-for v, x  in r
+                #                        //-console.log v, ss.state.rows[y][x]
+                #                        //-if v isnt 255-ss.state.rows[y][x] then return false 
+                #                //-return true
+                #        //-}
+                #    //-]
+
+                ConsoleDisplay = React.createClass
+                    render: ->
+                        {div, p} = React.DOM
+                        div null,
+                            @props.lines.map (x, i) ->
+                                p {key: i}, x
+
+                checkRosso = $("#check-rosso-alto-sinistra")
+                checkVerde = $("#check-verde-basso-destra")
+
+                $("input#rosso-alto-sinistra").on "input", -> render()
+                $("input#verde-basso-destra").on "input", -> render()
+
+                testRosso = -> String(ss.state.rows[0][0][0]) is $("#rosso-alto-sinistra").val()
+                testVerde = -> String(ss.state.rows[7][7][1]) is $("#verde-basso-destra").val()
+
+                check = React.createClass
+                    render: ->
+                        {i} = React.DOM
+                        if @props.value
+                            i 
+                                className: "fa fa-check"
+                                style: {color:"green"}
+                        else
+                            i
+                                className: "fa fa-times"
+                                style: {color: "red"}
+                            null
+
+
+                render = =>
+
+                    React.render (_e Image, 
+                            handleClick: (coords) -> 
+                                ss.invertPixel coords[0], coords[1] 
+                            selectedPixel: ss.state.selectedPixel
+                            rows: ss.state.rows )
+                        , img
+
+                    React.render (_e ConsoleDisplay, 
+                            lines: ss.state.lines)
+                        , consoleDisplay
+
+                    React.render (_e ExsCheck, 
+                                tests: tests
+                        ), exsCheck 
+                    
+
+                    React.render (_e check, {value: testRosso()}), checkRosso[0]
+                    React.render (_e check, {value: testVerde()}), checkVerde[0]
+
+
+
+                React.render (_e Console2, 
+                    buttons:
+                        "esegui": ->
+                            res = ss.exec ss.state.command
+                            if res
+                                ss.state.lines = [JSON.stringify(res)]
+                            ss.commitState()
+                    onEnter: (x) -> 
+                        ss.exec ss.state.command
+                    onShiftEnter: (x) -> 
+                        ss.exec ss.state.command
+                    onMap: (x) ->
+                        ss.map x
+                    onChange: (e) -> ss.state.command = e.target.value 
+                ), cns
+
+                ss.on "error", (e) -> console.log e
+
+                ss.on "change", -> 
+                    render()
+
+                render()

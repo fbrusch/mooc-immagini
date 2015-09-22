@@ -1,0 +1,70 @@
+html
+    head
+        link(href='https://fonts.googleapis.com/css?family=Open+Sans',rel='stylesheet',type='text/css')
+        link(rel="stylesheet",href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css")
+        
+        style
+            :less
+                body {
+                    font-family: "Open Sans";
+                }
+                #console > {font-size:20px}
+    body
+        //-your-image(data-data="smiley",data-console="true")
+        div
+            #image(style="display:inline-block")
+            //#values(style="display:inline-block")
+        #console(style="margin:10px;font-size:20px")
+        #exsCheck
+        script(src="ExsCheck.js")
+        script(src="app.js")
+        script
+            :coffeescript
+                {Console2, Matrix, FontAwesome, $, React, Image, Console, SS, _e, imgsData} = window.images
+
+                cns = $("#console")[0]
+                img = $("#image")[0]
+                exsCheck = $("#exsCheck")[0]
+                values = $("#values")[0]
+
+                rows = imgsData["smiley"]
+
+                ss = new SS(rows)
+
+                ss.on "error", (e) -> console.log e
+
+                tests =  
+                    [
+                        {
+                            display: "Il pixel in alto a sinistra deve essere nero"
+                            success: "GRANDE! Hai scritto ed eseguito correttamente le tue prime righe di codice!! Nunc est bibendum!"
+                            test: -> ss.state.rows[0][0] is 0
+                        }
+                    ]
+                ExsCheck = require 'ExsCheck'
+
+
+                render = =>
+                    React.render (_e Image, 
+                            handleClick: (coords) -> alert coords  
+                            selectedPixel: ss.state.selectedPixel
+                            rows: ss.state.rows )
+                        , img
+                    React.render (_e ExsCheck, 
+                                tests: tests
+                        ), exsCheck 
+
+
+                React.render (_e Console2, 
+                    onChange: (e) -> ss.state.command = e.target.value
+                    buttons: 
+                        "esegui": -> ss.exec ss.state.command 
+                    onEnter: (x) -> 
+                        ss.exec x
+                    onMap: (x) ->
+                        ss.map x
+                ), cns
+
+                ss.on "change", -> 
+                    render()
+                render()

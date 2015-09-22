@@ -1,0 +1,56 @@
+html
+    head
+
+    body
+        #redeyes
+
+        script(src="app.js")
+        script(src="jquery.js")
+        script
+            :coffeescript
+                $ = require 'jquery'
+                {Console2, ImageCanvas, SS, React, Console, loadSubImg} = window.images
+                createPhotoshop = (renderer, box, elem) ->
+                    cnsole = document.createElement "console"
+                    canvas = document.createElement "my-image"
+                    reset = $("<p><button>Reset</button></p>") 
+                    $(elem).append cnsole
+                    $(elem).append canvas
+                    $(elem).append reset
+
+                    _e = React.createElement
+                    ss = new SS()
+                    canvasRender = ->
+                        React.render (_e renderer, {pixelHeight: "5px", pixelWidth: "5px", rows: ss.state.rows, selectedPixel: ss.state.selectedPixel}), canvas
+
+                    ss.on "change", ->
+                        canvasRender()
+
+                    load = -> 
+                        loadSubImg("imgs/sunday_seurat.jpg",box.x,box.y,box.w,box.h,100)
+                            .then (rows) =>
+                                ss.state.rows = rows
+                                for r in rows
+                                    for p in r
+                                        p[0] = 255-p[0]
+                                        p[1] = 255-p[1]
+                                        p[2] = 255-p[2]
+                                ss.commitState()
+
+                    reset.on "click", -> load()
+
+                    load()
+                    
+                    React.render (_e Console2,
+                        onChange: (e) -> ss.state.command = e.target.value
+                        buttons:
+                            "Esegui su tutti": (cmd) ->
+                                ss.map ss.state.command
+                        
+                        onEnter: (cmd) ->
+                            ss.exec cmd
+                            ss.commitState()
+                        onMap: (cmd) ->
+                            ss.map cmd
+                    ), cnsole
+                createPhotoshop ImageCanvas, {}, $("#redeyes")

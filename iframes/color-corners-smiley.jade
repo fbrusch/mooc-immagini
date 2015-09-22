@@ -1,0 +1,89 @@
+html
+    head
+        meta(charset="UTF8")
+        link(rel="stylesheet", href="app.css")
+        link(href='https://fonts.googleapis.com/css?family=Open+Sans',rel='stylesheet',type='text/css')
+        link(rel="stylesheet",href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css")
+        
+        style
+            :less
+                body {
+                    font-family: "Open Sans";
+                }
+                #console > {font-size:20px}
+        script(src="lodash.js")
+        script(src="jquery.js")
+        script(src="node-event-emitter.js")
+        script(src="ExsCheck.js")
+        script(src="app.js")
+    body
+        //-your-image(data-data="smiley",data-console="true")
+        div
+            #image(style="display:inline-block")
+            //#values(style="display:inline-block")
+        #console(style="margin:10px;font-size:20px")
+        #exsCheck
+        script
+            :coffeescript
+                _ = require('lodash')
+                $ = require('jquery')
+                ExsCheck = require 'ExsCheck'
+                EventEmitter = require 'node-event-emitter'
+                {Matrix, Image, Console, SS, _e, imgsData} = window.images
+                window.metronome = new EventEmitter()
+                a = 0
+                setInterval (-> window.metronome.emit "tick", a++), 1000
+
+                cns = $("#console")[0]
+                img = $("#image")[0]
+                exsCheck = $("#exsCheck")[0]
+
+                rows = _.cloneDeep(imgsData["smiley"])
+
+                ss = new SS(rows)
+
+
+                tests =  
+                    [
+                        {
+                            display: "Il pixel in alto a sinistra deve essere rosso"
+                            test: -> _.isEqual ss.state.rows[0][0], [255, 0, 0]
+                        }
+                        {
+                            display: "Il pixel in alto a destra deve essere verde"
+                            test: -> _.isEqual ss.state.rows[0][7], [0, 255, 0]
+                        }
+                        {
+                            display: "Il pixel in basso a destra deve essere blu"
+                            test: -> _.isEqual ss.state.rows[7][7], [0, 0, 255]
+                        }
+                    ]
+
+                render = =>
+                    React.render (_e Image, 
+                            handleClick: (coords) -> 
+                                ss.invertPixel coords[0], coords[1] 
+                            selectedPixel: ss.state.selectedPixel
+                            rows: ss.state.rows )
+                        , img
+                    React.render (_e ExsCheck, 
+                                tests: tests
+                        ), exsCheck 
+
+
+                React.render (_e Console, 
+                    onEnter: (x) -> 
+                        ss.exec ss.state.command
+                    onShiftEnter: (x) -> 
+                        ss.exec ss.state.command
+                    onMap: (x) ->
+                        ss.map x
+                    onChange: (e) -> ss.state.command = e.target.value 
+                ), cns
+
+                ss.on "error", (e) -> console.log e
+
+                ss.on "change", -> 
+                    render()
+
+                render()

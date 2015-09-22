@@ -1,0 +1,81 @@
+html
+    head
+        meta(charset="UTF8")
+        link(rel="stylesheet", href="app.css")
+        style
+            :less
+                #console > {font-size:20px}
+        script(src="lodash.js")
+        script(src="jquery.js")
+        script(src="node-event-emitter.js")
+        script(src="ExsCheck.js")
+        script(src="app.js")
+    body
+        //-your-image(data-data="smiley",data-console="true")
+        p Inverti il contenuto dello smiley: bianco -> nero etc 
+        div
+            #image(style="display:inline-block")
+            //#values(style="display:inline-block")
+        #console(style="margin:10px;font-size:20px")
+        #exsCheck
+        script
+            :coffeescript
+                _ = require('lodash')
+                $ = require('jquery')
+                ExsCheck = require 'ExsCheck'
+                EventEmitter = require 'node-event-emitter'
+                {Matrix, Image, Console, SS, _e, imgsData} = window.images
+                window.metronome = new EventEmitter()
+                a = 0
+                setInterval (-> window.metronome.emit "tick", a++), 1000
+
+                cns = $("#console")[0]
+                img = $("#image")[0]
+                exsCheck = $("#exsCheck")[0]
+
+                rows = _.cloneDeep(imgsData["smiley"])
+
+                ss = new SS(rows)
+
+
+                tests =  
+                    [
+                        {
+                            display: "I pixel dello smiley devono essere invertiti"
+                            test: -> 
+                                for r, y in imgsData["smiley"]
+                                    for v, x  in r
+                                        console.log v, ss.state.rows[y][x]
+                                        if v isnt 255-ss.state.rows[y][x] then return false 
+                                return true
+                        }
+                    ]
+
+                render = =>
+                    React.render (_e Image, 
+                            handleClick: (coords) -> 
+                                ss.invertPixel coords[0], coords[1] 
+                            selectedPixel: ss.state.selectedPixel
+                            rows: ss.state.rows )
+                        , img
+                    React.render (_e ExsCheck, 
+                                tests: tests
+                        ), exsCheck 
+
+
+                React.render (_e Console, 
+                    onEnter: (x) -> 
+                        ss.exec ss.state.command
+                    onShiftEnter: (x) -> 
+                        ss.exec ss.state.command
+                    onMap: (x) ->
+                        ss.map x
+                    onChange: (e) -> ss.state.command = e.target.value 
+                ), cns
+
+                ss.on "error", (e) -> console.log e
+
+                ss.on "change", -> 
+                    render()
+
+                render()
