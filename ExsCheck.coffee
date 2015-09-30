@@ -30,8 +30,9 @@ module.exports = ExsCheck = React.createClass
                 render: ->
                     {span, p, div, i} = React.DOM
                     div null, 
-                        @props.tests.map (x) ->
+                        @props.tests.map (x) =>
                             res = x.test()
+                            if @props.setOutcome then @props.setOutcome res
                             div null,
                                 (span null, if res then x.success else x.display) 
                                 if res then (_e ok) else (_e ko)

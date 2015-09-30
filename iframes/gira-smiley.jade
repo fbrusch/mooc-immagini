@@ -9,10 +9,12 @@ html
                     font-family: "Open Sans";
                 }
                 #console > {font-size:20px}
+        script(src="https://cdn.rawgit.com/mozilla/jschannel/master/src/jschannel.js")
         script(src="lodash.js")
         script(src="jquery.js")
         script(src="node-event-emitter.js")
         script(src="ExsCheck.js")
+        script(src="iframe_check.js")
         script(src="app.js")
     body
         //-your-image(data-data="smiley",data-console="true")
@@ -36,6 +38,29 @@ html
                 img = $("#image")[0]
                 exsCheck = $("#exsCheck")[0]
 
+                # Here goes the verification stuff, try it, and then we move it
+                # to a parent layout
+
+                #channel = undefined
+
+                #outcome = false
+
+                #window.getState =  -> JSON.stringify {} 
+                #window.getGrade = -> JSON.stringify outcome
+
+                #if window.parent isnt window
+                #    channel = Channel.build
+                #        window: window.parent
+                #        origin: "*"
+                #        scope: "JSInput"
+
+                #    channel.bind "getGrade",  window.getGrade 
+                #    channel.bind "getState",  window.getState 
+
+                outcome = false
+                window.getGrade = -> outcome
+
+
                 rows = _.cloneDeep(imgsData["smiley"])
 
                 ss = new SS(rows)
@@ -44,7 +69,10 @@ html
                     [
                         {
                             display: "Fai in modo che lo smiley sorrida verso destra.."
-                            success: _("Bravissimo!!".split('')).reverse().value().join('')
+                            success: _("Bravissimo!!".split(''))
+                                .reverse().value().join('') + 
+                                " Ora premi CHECK per registrare il tuo successo!"
+                           
                             test: -> 
                                 cols = rows[0].length
                                 for r, y in imgsData["smiley"]
@@ -64,6 +92,8 @@ html
                         , img
                     React.render (_e ExsCheck, 
                                 tests: tests
+                                setOutcome: (x) ->
+                                    window.outcome = x
                         ), exsCheck 
 
 

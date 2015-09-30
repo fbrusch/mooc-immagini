@@ -1,9 +1,41 @@
 html
   head
         script(src="vendor-lib.js")
+        script(src="https://cdn.rawgit.com/mozilla/jschannel/master/src/jschannel.js")
+        script(src="iframe_check.js")
+        style.
+            body {
+                font-family: "Helvetica";
+                color: rgb(76, 76,76);
+                font-size: 16px;
+                }
+            input.color {
+                height:2em;
+                margin-right:10px;
+                padding:2px;
+
+                }
+
+            button {
+                border:1px solid black;
+                padding:11px;
+                background:none;
+                transition: all 0.4s;
+                }
+
+            button:hover {
+                background: rgb(200,200,200);
+                }
+
+            .color-message {
+                margin: 10px;   
+                }
+
   body
     script
         :coffeescript
+            outcome = false
+            window.getGrade = -> JSON.stringify outcome
             React = require 'react' 
             window.$ = $ = require 'jquery'
             _ = require 'lodash'
@@ -18,6 +50,16 @@ html
             randInt = (min, max) -> Math.floor (min + Math.random()*(max-min))
 
             colorStore = Reflux.createStore
+
+                serializeState: -> JSON.stringify @data
+                
+                deserializeState: (str) -> 
+                    try
+                        _.assign @data, JSON.parse str
+                        @trigger @data
+                        console.log "succesfully rehydrated state"
+                    catch
+
 
                 setGuessColorRandom: ->
                     @data.colors.guess = 
@@ -49,6 +91,12 @@ html
                     @listenTo resetGuessColor, 
                         @setGuessColorRandom.bind(this)
 
+            #window.getState = -> colorStore.serializeState()
+            window.getState = colorStore.serializeState 
+            window.setState = -> 
+                stateStr = if arguments.length is 1 then arguments[0] else arguments[1];
+                colorStore.deserializeState stateStr
+
             outcomeStore = Reflux.createStore
                 init: ->
                     @data = {success: undefined}
@@ -60,6 +108,7 @@ html
                         @trigger @data
 
             outcomeStore.listen ({success}) ->
+                outcome = success
                 if success
                        $("#successo").css("visibility","visible") 
 
@@ -97,7 +146,7 @@ html
                                 "forse hai messo un po' #{quanto} #{@props.colorName}"
                               else 
                                     ""
-                    _e "p", {}, message
+                    _e "p", {className: "color-message"}, message
 
             Pixel = _c
                 render: ->
@@ -155,14 +204,14 @@ html
     p
       pixel(color-name="guess", dim='100px')
     p
-      button#cambia-colore Prova con un altro colore!
+      button#cambia-colore Cambia colore
     p
       | Inserisci le componenti dei tre colori principali che, secondo te, servono per creare il colore da indovinare:
     p(style='clear: both')
       | ROSSO: 
       br
       |  
-      input#red(style='float:left', type='text')
+      input.color#red(style='float:left', type='text')
       |  
       pixel(style='float:left', color-name="red", dim='30px')
       |  
@@ -172,7 +221,7 @@ html
     p(style='clear: both')
       | VERDE: 
       br
-      input#green(style='float:left', type='text')
+      input.color#green(style='float:left', type='text')
       pixel(style='float:left', color-name="green", ng-init='zero=0; g2=100', g='g2', r='zero', b='zero', v='g2', dim='30px')
           
       message(color-name="green", color-component="g")
@@ -181,7 +230,7 @@ html
     p(style='clear: both')
       | BLU:
       br
-      input#blue(style='float:left', type='text', ng-model='b2')
+      input.color#blue(style='float:left', type='text', ng-model='b2')
       pixel(style='float:left', color-name="blue", dim='30px')
       message(color-name="blue", color-component="b")
     br
@@ -201,4 +250,4 @@ html
         span  Attenzione! Hai gi&agrave; sbagliato 
         guesses-count
         span &nbsp; volte! sei un po&apos; distratto!
-    p#successo(style="visibility:hidden")  Bravo! Beccato!
+    p#successo(style="visibility:hidden")  Bravo! Hai beccato il colore! Ora premi "Check" per registrare il tuo successo!
