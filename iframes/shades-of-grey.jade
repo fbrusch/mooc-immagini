@@ -1,0 +1,129 @@
+html
+    head
+        script(src="vendor-lib.js")
+        script
+            :coffeescript
+                $ = require 'jquery'
+                Reflux = require 'reflux'
+                React = require 'react'
+
+                # chi sono i nostri amici?
+                # qual è lo "stato" del widget?
+                # è conveniente esprimere in termini di "statechart"?
+                # ma soprattutto: queste domande hanno un senso?
+
+                actions = Reflux.createActions [
+                    "testerGreyUpdate",
+                    "guessGrey"
+                ]
+
+                # abbiamo un tester, per vedere come varia il grigio
+
+                testerGreyStore = Reflux.createStore
+
+                    listenables: actions
+
+                    init: ->
+                        @data = {grey: 128}
+
+                    onTesterGreyUpdate: (grey) ->
+                        @data.grey = grey
+                        @trigger @data
+
+                guessGreyStore = Reflux.createStore
+
+                    listenables: actions
+
+                    init: ->
+                        @data = {grey: 128}
+                        @trigger @data
+
+                    onGuessGrey: (grey) ->
+                        @data.grey = grey
+                        @trigger @data
+
+                toBeGuessedGreyStore = Reflux.createStore
+
+                    listenables: actions
+
+                    onResetToBeGuessed: ->
+                        @data = 
+                            grey: Math.floor(Math.random()*255)
+
+                    init: ->
+                        @data = {grey: 128}
+                        @onResetToBeGuessed()
+                        @trigger @data
+
+                GreyPixel = React.createClass
+
+                    mixins: [Reflux.ListenerMixin]
+
+                    getInitialState: ->
+                        grey: 128
+
+                    componentDidMount: ->
+                        @listenTo @props.statusStore, (data) -> 
+                            @setState data
+
+                    render: ->
+                        greyLevel = @state.grey
+                        color = "rgb(#{greyLevel}, #{greyLevel},
+                            #{greyLevel})"
+                        React.createElement "div",
+                            style:
+                                height: "100px"
+                                width: "100px"
+                                backgroundColor: color
+                                border: "1px solid black"
+                    
+                Slider = React.createClass
+
+                    getInitialState: ->
+                        value: 128
+
+                    handleChange: (event) ->
+                        value = event.target.value
+                        @setState {value}
+                        @props.onValueChange value
+
+                    render: ->
+                        React.createElement "input",
+                            type: "range"
+                            value: @state.value
+                            min:"0"
+                            max:"255"
+                            onChange: @handleChange
+
+                        
+                $(document).ready ->
+                    testerGreyStore.listen (data) -> 
+                        $("#grey-level").text data.grey
+
+                    $("#grey").on "input", -> 
+                        actions.testerGreyUpdate @value
+
+                    React.render (React.createElement Slider,
+                        onValueChange: actions.testerGreyUpdate), 
+                            $("#slider")[0]
+
+                    React.render (React.createElement GreyPixel,
+                        statusStore: testerGreyStore),
+                            $("#test-grey-pixel")[0]
+
+                    React.render (React.createElement GreyPixel,
+                        statusStore: guessGreyStore),
+                            $("#guess-grey-pixel")[0]
+
+                    $("button#guess").click -> 
+                        actions.guessGrey $("input#guess")[0].value 
+    body
+        h1 shades of gray
+        slider#slider
+        p#grey-level
+        #test-grey-pixel
+        #guess-grey-pixel
+        #to-be-guessed-grey-pixel
+        p            
+            input#guess(type="text")
+            button#guess Guess

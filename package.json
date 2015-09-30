@@ -12,11 +12,14 @@
   },
   "dependencies": {
     "bluebird": "^2.9.27",
+    "coffee-script": "^1.10.0",
     "font-awesome": "^4.3.0",
     "jquery": "^2.1.4",
+    "less": "^1.7.5",
     "lodash": "^3.9.3",
     "node-event-emitter": "0.0.1",
     "react": "^0.13.3",
-    "react-fontawesome": "^0.2.5"
+    "react-fontawesome": "^0.2.5",
+    "reflux": "^0.2.12"
   }
 }

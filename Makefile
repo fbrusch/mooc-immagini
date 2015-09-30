@@ -46,7 +46,7 @@ $(dist)/app.css: app.less
 	$(devbin)/lessc $< >$@
 
 iframes:
-	jade -P iframes/* -o $(dist)
+	$(devbin)/jade -P iframes/* -o $(dist)
 
 init: 
 	git checkout -b master
@@ -74,3 +74,6 @@ watch:
 livereload:
 	$(devbin)/livereload ./dist -p $(livereload_port)
 
+vendor-libs:
+	$(devbin)/browserify --t coffeeify -r jquery -r react \
+									   -r lodash -r reflux >dist/vendor-lib.js

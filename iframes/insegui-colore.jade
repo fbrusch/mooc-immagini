@@ -1,0 +1,204 @@
+html
+  head
+        script(src="vendor-lib.js")
+  body
+    script
+        :coffeescript
+            React = require 'react' 
+            window.$ = $ = require 'jquery'
+            _ = require 'lodash'
+            Reflux = require 'reflux'
+
+            _c = React.createClass
+            _e = React.createElement
+
+            setColorComponents = Reflux.createAction()
+            resetGuessColor = Reflux.createAction()
+
+            randInt = (min, max) -> Math.floor (min + Math.random()*(max-min))
+
+            colorStore = Reflux.createStore
+
+                setGuessColorRandom: ->
+                    @data.colors.guess = 
+                        r: randInt 0, 255
+                        g: randInt 0, 255
+                        b: randInt 0, 255
+                    @trigger @data
+
+                updateGuess: (r, g, b) ->
+                    @data.colors.red.r = r
+                    @data.colors.blue.b = b
+                    @data.colors.green.g = g
+                    @data.colors.test = {r, g, b}
+                    guess = @data.colors.guess
+                    distances = [guess.r-r, guess.b-b, guess.g-g]
+                    @data.maxDistance = _.max distances.map(Math.abs)
+                    @trigger @data
+
+                init: -> 
+                    @data = 
+                        colors:
+                            guess: {r:10, b:10, g:200}
+                            red: {r:255, b:0, g:0}
+                            blue: {r:0, b:255, g:0}
+                            green: {r:0, b:0, g:255}
+                            test: {r:100, b:255, g:255}
+                    @setGuessColorRandom()
+                    @listenTo setColorComponents, @updateGuess.bind(this)
+                    @listenTo resetGuessColor, 
+                        @setGuessColorRandom.bind(this)
+
+            outcomeStore = Reflux.createStore
+                init: ->
+                    @data = {success: undefined}
+                    @listenTo colorStore, ({colors}) ->
+                        test = _.transform colors.test, (res, n, k) -> 
+                            res[k] = Number n
+                        @data.success = _.isEqual test, colors.guess
+                        console.log colors
+                        @trigger @data
+
+            outcomeStore.listen ({success}) ->
+                if success
+                       $("#successo").css("visibility","visible") 
+
+            guessesCountStore = Reflux.createStore
+                init: ->
+                    @data = {guesses: 0}
+                    @listenTo setColorComponents, => 
+                        @data.guesses += 1
+                        @trigger @data
+
+            GuessesCount = _c
+                getInitialState: ->
+                    guesses: undefined 
+                componentDidMount: ->
+                    guessesCountStore.listen ({guesses}) =>
+                        @setState {guesses}
+                render: ->
+                    _e "span", {}, @state.guesses
+
+            guessesCountStore.listen ({guesses})->
+                if guesses > 25
+                    $("#attenzione").css("visibility","visible")
+
+                    
+            Message = _c
+                render: ->
+                    colorComponent =
+                        colorStore.data.colors[@props.colorName][@props.colorComponent]
+                    guessComponent =
+                        colorStore.data.colors.guess[@props.colorComponent]
+                    distance = guessComponent - colorComponent
+                    maxDistance = colorStore.data.maxDistance
+                    quanto = if distance > 0 then "troppo poco" else "troppo"
+                    message = if Math.abs(distance) == Math.abs(maxDistance)
+                                "forse hai messo un po' #{quanto} #{@props.colorName}"
+                              else 
+                                    ""
+                    _e "p", {}, message
+
+            Pixel = _c
+                render: ->
+                    if @props.colorName
+                        colorStruct = colorStore.data.colors[@props.colorName]
+                        color = "rgb(#{colorStruct.r},#{colorStruct.g},#{colorStruct.b})"
+                    else
+                        color = "#aabbcc"
+                    _e "div", 
+                        style:
+                            _.assign
+                                height: @props.dim 
+                                width: @props.dim
+                                backgroundColor: color
+                            , {border: "1px solid black"} 
+                
+
+            renderTag = (tag, reactClass) ->
+                for p in $(tag)
+                    props = _.transform p.attributes, (res, attr) ->
+                        res[_.camelCase attr.name] = attr.value
+                    React.render (_e reactClass, props), p 
+
+            render = -> 
+                renderTag "pixel", Pixel
+                renderTag "message", Message
+
+            $(document).ready -> 
+
+                $("#prova").click -> 
+                    red = $("input#red")[0].value
+                    green = $("input#green")[0].value
+                    blue = $("input#blue")[0].value
+                    setColorComponents red, green, blue
+
+                $("#cambia-colore").click -> 
+                    resetGuessColor()
+                render()
+                renderTag "guesses-count", GuessesCount
+            colorStore.listen render
+
+
+    p
+      | Quindi: ogni &quot;
+      b tripletta
+      | &quot; (r,g,b) di numeri descrive un colore: quello ottenuto &quot;sommando&quot; quantit&agrave; 
+      b r
+      |  di rosso con una 
+      b g
+      |  di verde e una 
+      b b
+      |  di blu.
+    p
+      | Chiediamoci allora, come abbiamo fatto per il grigio, se &egrave; possibile invece, dato un colore, ottenere la tripletta di numeri che lo rappresenta...
+    p
+      pixel(color-name="guess", dim='100px')
+    p
+      button#cambia-colore Prova con un altro colore!
+    p
+      | Inserisci le componenti dei tre colori principali che, secondo te, servono per creare il colore da indovinare:
+    p(style='clear: both')
+      | ROSSO: 
+      br
+      |  
+      input#red(style='float:left', type='text')
+      |  
+      pixel(style='float:left', color-name="red", dim='30px')
+      |  
+      message(color-name="red", color-component="r")
+    br
+    br
+    p(style='clear: both')
+      | VERDE: 
+      br
+      input#green(style='float:left', type='text')
+      pixel(style='float:left', color-name="green", ng-init='zero=0; g2=100', g='g2', r='zero', b='zero', v='g2', dim='30px')
+          
+      message(color-name="green", color-component="g")
+    br
+    br
+    p(style='clear: both')
+      | BLU:
+      br
+      input#blue(style='float:left', type='text', ng-model='b2')
+      pixel(style='float:left', color-name="blue", dim='30px')
+      message(color-name="blue", color-component="b")
+    br
+    br
+    p(style='clear: both')
+      button#prova Prova 
+      |  con queste componenti e guarda che colore hai creato!
+    p(style='display:flex; flex-direction:row')
+      pixel(color-name="guess", dim='100px')
+      |   
+      pixel(style='margin-left: 20px', color-name='test', dim='100px')
+    span Tentativi: 
+    span 
+        guesses-count
+   
+    div#attenzione(style="visibility:hidden")  
+        span  Attenzione! Hai gi&agrave; sbagliato 
+        guesses-count
+        span &nbsp; volte! sei un po&apos; distratto!
+    p#successo(style="visibility:hidden")  Bravo! Beccato!
