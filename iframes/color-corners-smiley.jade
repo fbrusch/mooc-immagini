@@ -16,25 +16,29 @@ html
         script(src="jquery.js")
         script(src="node-event-emitter.js")
         script(src="ExsCheck.js")
-        script(src="iframe_check.js")
+        script(src="checkTests.js")
         script(src="app.js")
     body
         //-your-image(data-data="smiley",data-console="true")
         div
             #image(style="display:inline-block")
             //#values(style="display:inline-block")
+        #lastCommandDisplay
         #console(style="margin:10px;font-size:20px")
         #exsCheck
         script
             :coffeescript
                 _ = require('lodash')
                 $ = require('jquery')
+                checkTests = require 'checkTests'
+
+
+                # This is the exercise check display component 
                 ExsCheck = require 'ExsCheck'
-                EventEmitter = require 'node-event-emitter'
-                {Matrix, Image, Console, SS, _e, imgsData} = window.images
-                window.metronome = new EventEmitter()
-                a = 0
-                setInterval (-> window.metronome.emit "tick", a++), 1000
+
+                # Found no better way to share these objects
+
+                {LastCommandDisplay, Matrix, Image, Console, SS, _e, imgsData} = window.images
 
                 cns = $("#console")[0]
                 img = $("#image")[0]
@@ -43,7 +47,6 @@ html
                 rows = _.cloneDeep(imgsData["smiley"])
 
                 ss = new SS(rows)
-
 
                 tests =  
                     [
@@ -61,17 +64,32 @@ html
                         }
                     ]
 
+                # In 'outcome' I store the exercises outcome
+
+                outcome = false
+                window.getGrade = -> outcome
+                window.getState = ss.serializeState
+                window.setState = -> 
+                    stateStr = if arguments.length is 1 then arguments[0] else arguments[1];
+                    ss.deserializeState stateStr
+
                 render = =>
+                    React.render (_e LastCommandDisplay,
+                        {text: ss.state.lastCommand})
+                        , $("#lastCommandDisplay")[0] 
+
                     React.render (_e Image, 
                             handleClick: (coords) -> 
                                 ss.invertPixel coords[0], coords[1] 
                             selectedPixel: ss.state.selectedPixel
                             rows: ss.state.rows )
                         , img
+
                     React.render (_e ExsCheck, 
                                 tests: tests
                         ), exsCheck 
 
+                    outcome = checkTests tests
 
                 React.render (_e Console, 
                     onEnter: (x) -> 
@@ -81,7 +99,10 @@ html
                     onMap: (x) ->
                         ss.map x
                     onChange: (e) -> ss.state.command = e.target.value 
+                    textStore: ss
+                    text: ss.state.command 
                 ), cns
+
 
                 ss.on "error", (e) -> console.log e
 
@@ -89,3 +110,5 @@ html
                     render()
 
                 render()
+
+        script(src="iframe_check.js")
