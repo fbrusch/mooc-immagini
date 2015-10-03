@@ -2,6 +2,7 @@ $ = require 'jquery'
 EventEmitter = require 'node-event-emitter'
 Promise = require 'bluebird'
 React = require 'react'
+Reflux = require 'reflux'
 require 'react/addons'
 _ = require 'lodash'
 window.React = React
@@ -10,6 +11,11 @@ React.addons.Perf.start()
 
 _c = React.createClass
 _e = React.createElement
+
+resetConsole = Reflux.createAction()
+setLastCommand = Reflux.createAction()
+selectPixel = Reflux.createAction()
+setPixel = Reflux.createAction()
 
 Pixel = _c
     displayName: "Pixel"
@@ -175,7 +181,13 @@ Console2 = _c
                     , k)
 
 Console = _c
-    getInitialState: -> {commands: []}
+    getInitialState: -> {commands: [], text: ""}
+
+    componentDidMount: ->
+        resetConsole.listen =>
+            @setState {text: ""}
+            
+
     enter: ->
         text = React.findDOMNode(@refs.text).value
         @setState {commands: @state.commands + [text]}
@@ -185,31 +197,40 @@ Console = _c
         text = React.findDOMNode(@refs.text).value
         @props.onMap text 
 
+    handleTextChange: (e) ->
+        @setState {text: e.target.value}
+
     render: ->
         {div, textarea, p, button} = React.DOM
         div null,
             #(p null,
                 #@state.commands
             #)
-            (textarea
+            (_e "input",
+                type:"text"
                 style:
                     height:"5em"
                     width:"100%"
                     display: "block"
                     fontFamily: "monospace"
-                onChange: @props.onChange
+                onChange: (e) =>
+                    @handleTextChange e
+                    @props.onChange e
                 ref: "text"
                 onKeyDown: (e) =>
                     if e.keyCode is 13
-                        @props.onShiftEnter? e)
+                        @props.onShiftEnter? e
+                value: @state.text 
+            )
             , (button
                 style:
                     marginTop:10
                     marginBottom:10
                 onClick: @enter
                 , "vai")
-            , (button
-                onClick: @map
+            , if @props.map
+                (button
+                    onClick: @mapV
                 , "map")
 
 ImageCanvas = _c
@@ -244,18 +265,53 @@ ImageCanvas = _c
             height: @props.rows.length
             width: @props.rows[0]?.length
 
+
+LastCommandDisplay = _c 
+    render: -> _e "p", null, @props.text 
+            #@props.text? || ""
+
 SS = class extends EventEmitter
 
     constructor: (rows) ->
         @state = {rows: rows}
 
+        resetConsole.listen =>
+            @state.command = ""
+
+        setLastCommand.listen (cmd) =>
+            @state.lastCommand = cmd
+            @emit "change"
+
+        selectPixel.listen ([x, y]) =>
+            @state.selectedPixel = [x, y]
+            @state.pickedColor = @state.rows[x][y]
+            @emit "change"
+
+        setPixel.listen (rgb) =>
+            @setPixel @selectedPixel, rgb
+
+    serializeState: => 
+        debugger
+        JSON.stringify @state
+
+    deserializeState: (str) ->
+        try
+            _.assign @state, JSON.parse str
+            @emit "change", @state
+        catch
+
     commitState: ->
-        @emit "change"
+        @emit "change", @state
 
     exec: (cmd) ->
         img = this
         try
             res = (eval cmd)
+
+            # if successful, reset the console and set
+            # last command
+            resetConsole()
+            setLastCommand cmd
             @commitState()
             return res
         catch e
@@ -265,15 +321,21 @@ SS = class extends EventEmitter
        @state.rows[x][y] = Math.abs (255- @state.rows[x][y])
        @commitState()
 
-    map: (cmd) -> 
+    map: (cmd, cb) -> 
             img = this
             try
+                rows = @state.rows
+                _img = (x, y) ->
+                    getPixel: -> img.state.rows[y][x]
+                    setPixel: (rgb) -> img.state.rows[y][x] = rgb
                 @state.rows.map (r, i) =>
                     r.map (x, j) =>
-                        img.selectPixel j, i
-                        (eval cmd)
-                        #img.setPixel(img.getPixel()[0])
+                        try
+                            f = new Function("img", cmd)
+                            f _img(j, i)
                 @commitState()
+                if cb
+                    cb()
             catch e
                 @emit "error", e 
 
@@ -289,9 +351,8 @@ SS = class extends EventEmitter
         @state.rows[y][x]
 
     setPixel: (rgb) ->
-        @state.rows[@state.selectedPixel[1]][@state.selectedPixel[0]] = rgb
-
-    
+        try
+            @state.rows[@state.selectedPixel[0]][@state.selectedPixel[1]] = rgb
 
 $("my-image").each ->
     cns = document.createElement "console"
@@ -369,3 +430,4 @@ module.exports =
     FontAwesome: require 'react-fontawesome'
     loadSubImg: loadSubImg
     Matrix: Matrix
+    LastCommandDisplay: LastCommandDisplay
