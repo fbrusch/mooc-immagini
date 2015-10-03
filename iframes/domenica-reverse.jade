@@ -1,15 +1,14 @@
 html
     head
-
+        link(rel="stylesheet",href="app.css")
     body
         #redeyes
-
         script(src="app.js")
         script(src="jquery.js")
         script
             :coffeescript
                 $ = require 'jquery'
-                {Console2, ImageCanvas, SS, React, Console, loadSubImg} = window.images
+                {_, Console2, ImageCanvas, SS, React, Console, loadSubImg} = window.images
                 createPhotoshop = (renderer, box, elem) ->
                     cnsole = document.createElement "console"
                     canvas = document.createElement "my-image"
@@ -19,16 +18,19 @@ html
                     $(elem).append reset
 
                     _e = React.createElement
-                    ss = new SS()
+                    window.ss = ss = new SS()
                     canvasRender = ->
                         React.render (_e renderer, {pixelHeight: "5px", pixelWidth: "5px", rows: ss.state.rows, selectedPixel: ss.state.selectedPixel}), canvas
 
                     ss.on "change", ->
                         canvasRender()
 
+                    originalImage = undefined
+
                     load = -> 
                         loadSubImg("imgs/sunday_seurat.jpg",box.x,box.y,box.w,box.h,100)
                             .then (rows) =>
+                                originalImage = JSON.parse(JSON.stringify(rows))
                                 ss.state.rows = rows
                                 for r in rows
                                     for p in r
@@ -37,6 +39,18 @@ html
                                         p[2] = 255-p[2]
                                 ss.commitState()
 
+                    checkIfReversed = ->
+                        for r, i in ss.state.rows
+                            for p, j in r
+                                op = originalImage[i][j]
+                                if p[0] isnt op[0] || 
+                                    p[1] isnt op[1] || 
+                                    p[2] isnt op[2]
+                                        console.log \
+                                            i,j,p,originalImage[i][j].slice(0,-1)
+                                        return false
+                        return true
+
                     reset.on "click", -> load()
 
                     load()
@@ -44,12 +58,18 @@ html
                     React.render (_e Console2,
                         onChange: (e) -> ss.state.command = e.target.value
                         buttons:
-                            "Esegui su tutti": (cmd) ->
-                                ss.map ss.state.command
-                        
-                        onEnter: (cmd) ->
-                            ss.exec cmd
-                            ss.commitState()
+                            "Esegui su tutti": (cmd) -> ss.map ss.state.command, -> 
+                                        if checkIfReversed()
+                                            alert """grande, hai sviluppato la
+                                                domenica! ora premi CHECK
+                                                per registrare il risultato!"""
+                                        else
+                                            alert "riprova"
+                                     
+                            
+                            onEnter: (cmd) ->
+                                ss.exec cmd
+                                ss.commitState()
                         onMap: (cmd) ->
                             ss.map cmd
                     ), cnsole
