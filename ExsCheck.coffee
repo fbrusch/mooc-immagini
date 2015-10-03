@@ -15,17 +15,6 @@ ko = React.createClass
             name: "check"
             style: {color:"red"}
 
-#module.exports = ExsCheck = React.createClass 
-    #render: ->
-        #{span, p, div, i} = React.DOM
-        #div null, 
-            #@props.tests.map (x) ->
-                #div null,
-                    #(span null, x.display) 
-                    #if x.test() 
-                        #React.createElement ok 
-                    #else 
-                        #React.createElement ko
 module.exports = ExsCheck = React.createClass 
                 render: ->
                     {span, p, div, i} = React.DOM
