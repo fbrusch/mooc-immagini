@@ -3,9 +3,9 @@ channel = undefined
 
 outcome = false
 
-window.getState =  -> JSON.stringify {} 
-window.getGrade = -> JSON.stringify outcome
-window.setState = -> {} 
+#window.getState =  -> JSON.stringify {} 
+#window.getGrade = -> JSON.stringify outcome
+#window.setState = -> {} 
 
 if window.parent isnt window
     channel = window.channel = Channel.build
@@ -15,4 +15,6 @@ if window.parent isnt window
 
     channel.bind "getGrade",  -> window.getGrade.apply null, arguments
     channel.bind "getState",  -> window.getState.apply null, arguments
-    channel.bind "setState",  -> window.setState.apply null, arguments
+    channel.bind "setState",  -> 
+        console.log "setting state"
+        window.setState.apply null, arguments
