@@ -13,7 +13,7 @@ dist = dist
 devbin = ./node_modules/.bin
 browserify = $(devbin)/browserify --t coffeeify
 
-build: app index app.css iframes ExsCheck dist/iframe_check.js
+build: app index app.css iframes ExsCheck dist/iframe_check.js dist/checkTests.js
 
 index: $(dist)/index.html
 app: $(dist)/app.js
@@ -40,6 +40,10 @@ $(dist)/node-event-emitter.js:
 $(dist)/ExsCheck.js: ExsCheck.coffee
 	#coffee -bc $<
 	$(devbin)/browserify --t coffeeify -r ./ExsCheck.coffee:ExsCheck >$@
+
+$(dist)/checkTests.js: checkTests.coffee
+	#coffee -bc $<
+	$(devbin)/browserify --t coffeeify -r ./checkTests.coffee:checkTests >$@
 
 $(dist)/%.js: %.coffee
 	coffee -bc -o $(dir $@) $<
