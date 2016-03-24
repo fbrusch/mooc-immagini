@@ -1,29 +1,66 @@
 html
     head
+        script(src="https://cdn.rawgit.com/mozilla/jschannel/master/src/jschannel.js")
         link(rel="stylesheet",href="app.css")
     body
         #redeyes
+        p#outcome-message
+        #help.modal
+            .close.fa.fa-close
+            h2 Aiuti 
+            ol
+                li.hint
+                    p.q.
+                        Abbiamo capito cosa vuol dire, cromaticamente,
+                        "negativo" di un colore.
+                        Ma in che rapporto aritmetico stanno le coordinate RGB
+                        di un colore, con quelle del suo <i>negativo</i>?
+                    p.
+                        Cominciamo a chiedercelo nel caso dei grigi: 
+                        se abbiamo 256 livelli di grigio, 
+                        il negativo di 255 (bianco)
+                        che livello di grigio sarà? E il negativo di 254?
+                li.hint
+                    p.
+                        Prova a eseguire su tutti i pixel il seguente comando:
+                    pre.
+                        c = img.getPixel(); img.setPixel([255-c[0], 0, 0])
+                    p.
+                        Cosa hai ottenuto? Come te lo spieghi?
+        
+
         script(src="app.js")
         script(src="jquery.js")
         script
             :coffeescript
                 $ = require 'jquery'
-                {_, Console2, ImageCanvas, SS, React, Console, loadSubImg} = window.images
+                {hintize, modal, Modal, _, Console2, ImageCanvas, SS, React, Reflux, Console, loadSubImg} = window.images
+                _e = React.createElement
+                actions = Reflux.createActions [
+                    "setOutcome", "showMessage"
+                ]
+
+                ## hint logic
+
+                hintize()
+                ## modal logic
+
+                outcome = false
                 createPhotoshop = (renderer, box, elem) ->
                     cnsole = document.createElement "console"
                     canvas = document.createElement "my-image"
-                    reset = $("<p><button>Reset</button></p>") 
                     $(elem).append cnsole
                     $(elem).append canvas
-                    $(elem).append reset
 
                     _e = React.createElement
                     window.ss = ss = new SS()
                     canvasRender = ->
-                        React.render (_e renderer, {pixelHeight: "5px", pixelWidth: "5px", rows: ss.state.rows, selectedPixel: ss.state.selectedPixel}), canvas
+                        React.render (_e renderer, 
+                            pixelHeight: "5px"
+                            pixelWidth: "5px"
+                            rows: ss.state.rows
+                            selectedPixel: ss.state.selectedPixel), canvas
 
-                    ss.on "change", ->
-                        canvasRender()
 
                     originalImage = undefined
 
@@ -51,26 +88,63 @@ html
                                         return false
                         return true
 
-                    reset.on "click", -> load()
-
                     load()
-                    
-                    React.render (_e Console2,
-                        onChange: (e) -> ss.state.command = e.target.value
-                        buttons:
-                            "Esegui su tutti": (cmd) -> ss.map ss.state.command, -> 
-                                        if checkIfReversed()
-                                            alert """grande, hai sviluppato la
-                                                domenica! ora premi CHECK
-                                                per registrare il risultato!"""
-                                        else
-                                            alert "riprova"
-                                     
-                            
-                            onEnter: (cmd) ->
-                                ss.exec cmd
-                                ss.commitState()
-                        onMap: (cmd) ->
-                            ss.map cmd
-                    ), cnsole
+
+
+                    actions.showMessage.listen (message) ->
+                        $("#outcome-message").text message
+
+                    actions.setOutcome.listen (right) ->
+                        if right
+                            actions.showMessage  """grande, hai sviluppato la
+                            domenica! ora premi CHECK
+                            per registrare il risultato!"""
+                            outcome = true
+                        else
+                            actions.showMessage """
+                                Mmm, non mi sembra che la
+                                "domenica" sia ancora del tutto 
+                                "sviluppata"... Prova ancora! """
+                            outcome = false
+
+                    consoleRender = ->
+
+                        React.render (_e Console2,
+                            error: ss.state.error
+                            lastCommand: ss.state.lastCommand
+                            onChange: (e) -> ss.state.command = e.target.value
+                            buttons:
+                                "Esegui su tutti": (cmd) -> 
+                                            ss.map ss.state.command, -> 
+                                                if checkIfReversed()
+                                                    actions.setOutcome true
+                                                else
+                                                    actions.setOutcome false
+                                "Reset": load
+                                "Suggerimenti": modal($("#help")).show
+                                         
+                            onShiftEnter: (cmd) ->
+                                ss.map ss.state.command, -> 
+                                    if checkIfReversed()
+                                        actions.setOutcome true
+                                    else
+                                        actions.setOutcome false
+                            onMap: (cmd) ->
+                                ss.map cmd
+                        ), cnsole
+
+                    ss.on "change", ->
+                        canvasRender()
+                        consoleRender()
+
                 createPhotoshop ImageCanvas, {}, $("#redeyes")
+
+
+                window.getGrade = -> outcome 
+                window.getState = -> ss.serializeState ["command", "lastCommand"]
+                console.log "uappa"
+                window.setState = -> 
+                    stateStr = if arguments.length is 1 then arguments[0] else arguments[1];
+                    ss.deserializeState stateStr
+
+        script(src="iframe_check.js") 

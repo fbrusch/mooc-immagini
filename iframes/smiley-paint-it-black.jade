@@ -3,13 +3,14 @@ html
         meta(charset="UTF8")
         link(href='https://fonts.googleapis.com/css?family=Open+Sans',rel='stylesheet',type='text/css')
         link(rel="stylesheet",href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css")
+        link(rel="stylesheet",href="app.css")
+        script(src="https://cdn.rawgit.com/mozilla/jschannel/master/src/jschannel.js")
         
         style
             :less
                 body {
                     font-family: "Open Sans";
                 }
-                #console > {font-size:20px}
         script(src="lodash.js")
         script(src="jquery.js")
         script(src="node-event-emitter.js")
@@ -20,7 +21,7 @@ html
         div
             #image(style="display:inline-block")
             //#values(style="display:inline-block")
-        #console(style="margin:10px;font-size:20px")
+        #console(style="margin:10px")
         #exsCheck
         script
             :coffeescript
@@ -46,18 +47,29 @@ html
                     [
                         {
                             display: "Deve essere tutto nero"
-                            success: "Visto? Ma quanto ci avresti messo, a farlo a mano?!"
+                            success: "Visto? Ma quanto ci avresti messo, a farlo
+                            a mano?! Ora premi CHECK per registrare il risultato"
                             test: -> 
                                 for r, y in imgsData["smiley"]
                                     for v, x  in r
                                         console.log v, ss.state.rows[y][x]
-                                        if not _.eq ss.state.rows[y][x], [0,0,0]
+                                        if not (_.eq ss.state.rows[y][x], [0,0,0] or
+                                                ss.state.rows[y][x] == 0)
                                             return false
                                 return true
                         }
                     ]
 
+                outcome = false
+                window.getGrade = -> outcome
+                window.getState = ss.serializeState
+                window.setState = -> 
+                    stateStr = if arguments.length is 1 then arguments[0] else arguments[1];
+                    ss.deserializeState stateStr
+
                 render = =>
+                    outcome = tests[0].test()
+
                     React.render (_e Image, 
                             handleClick: (coords) -> 
                                 ss.invertPixel coords[0], coords[1] 
@@ -69,16 +81,19 @@ html
                         ), exsCheck 
 
 
-                React.render (_e Console2, 
-                    onChange: (e) -> ss.state.command = e.target.value
-                    buttons:
-                        "Esegui su tutti": -> ss.map ss.state.command
-                    onShiftEnter: (x) -> 
-                        ss.exec ss.state.command
-                    onMap: (x) ->
-                        ss.map x
-                    onChange: (e) -> ss.state.command = e.target.value 
-                ), cns
+                    React.render (_e Console2, 
+                        lastCommand: ss.state.lastCommand
+                        error: ss.state.error
+                        onChange: (e) -> ss.state.command = e.target.value
+                        buttons:
+                            "Esegui su tutti": -> ss.map ss.state.command
+                            "Reset": ss.resetRows
+                        onShiftEnter: (x) -> 
+                            ss.map ss.state.command
+                        onMap: (x) ->
+                            ss.map x
+                        onChange: (e) -> ss.state.command = e.target.value 
+                    ), cns
 
                 ss.on "error", (e) -> console.log e
 
@@ -86,3 +101,4 @@ html
                     render()
 
                 render()
+        script(src="iframe_check.js")

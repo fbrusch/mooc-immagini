@@ -2,12 +2,13 @@ html
   head
         script(src="vendor-lib.js")
         script(src="https://cdn.rawgit.com/mozilla/jschannel/master/src/jschannel.js")
+        link(rel="stylesheet", href="app.css")
         style.
-            body {
-                font-family: "Helvetica";
-                color: rgb(76, 76,76);
-                font-size: 16px;
-                }
+            //-body {
+                //-#font-family: "Helvetica";
+                //-color: rgb(76, 76,76);
+                //-font-size: 16px;
+                //-}
             input.color {
                 height:2em;
                 margin-right:10px;
@@ -22,9 +23,7 @@ html
                 font-size: 1em;
 
                 }
-            .component {
-                height: 10px;
-                }
+
             button {
                 border:1px solid black;
                 padding:11px;
@@ -37,8 +36,6 @@ html
                 }
 
             .color-message {
-                min-height:10px;
-                min-width:10px;
                 margin: 10px;   
                 display:inline-block;
                 }
@@ -61,6 +58,20 @@ html
 
             randInt = (min, max) -> Math.floor (min + Math.random()*(max-min))
 
+            guessesCountStore = Reflux.createStore
+
+                set: (data) ->
+                    _.assign @data, data
+                    @trigger @data
+                init: ->
+                    @data = {guesses: 0}
+                    @listenTo setColorComponents, => 
+                        @data.guesses += 1
+                        @trigger @data
+                    @listenTo resetGuessColor, =>
+                        @data.guesses = 0
+                        @trigger @data
+
             colorStore = Reflux.createStore
 
                 serializeState: -> JSON.stringify @data
@@ -68,26 +79,23 @@ html
                 deserializeState: (str) -> 
                     try
                         _.assign @data, JSON.parse str
+                        @data.guesses = @data.guesses or 0
+                        guessesCountStore.set {guesses: @data.guesses}
                         @trigger @data
                         console.log "succesfully rehydrated state"
                     catch
 
 
                 setGuessColorRandom: ->
+                    luminance = randInt 0,255
                     @data.colors.guess = 
-                        r: randInt 0, 255
-                        g: randInt 0, 255
-                        b: randInt 0, 255
+                        r: luminance
+                        g: luminance
+                        b: luminance
                     @trigger @data
 
                 updateGuess: (r, g, b) ->
-                    @data.colors.red.r = r
-                    @data.colors.blue.b = b
-                    @data.colors.green.g = g
                     @data.colors.test = {r, g, b}
-                    guess = @data.colors.guess
-                    distances = [guess.r-r, guess.b-b, guess.g-g]
-                    @data.maxDistance = _.max distances.map(Math.abs)
                     @trigger @data
 
                 init: -> 
@@ -97,17 +105,19 @@ html
                             red: {r:255, b:0, g:0}
                             blue: {r:0, b:255, g:0}
                             green: {r:0, b:0, g:255}
-                            test: {r:100, b:255, g:255}
+                            test: {r:undefined , b:undefined, g:undefined}
+
                     @setGuessColorRandom()
+
                     @listenTo setColorComponents, @updateGuess.bind(this)
+
                     @listenTo resetGuessColor, 
                         @setGuessColorRandom.bind(this)
 
+                    @listenTo guessesCountStore, (data) =>
+                        @data.guesses = data.guesses
+
             #window.getState = -> colorStore.serializeState()
-            window.getState = colorStore.serializeState 
-            window.setState = -> 
-                stateStr = if arguments.length is 1 then arguments[0] else arguments[1];
-                colorStore.deserializeState stateStr
 
             outcomeStore = Reflux.createStore
                 init: ->
@@ -123,17 +133,15 @@ html
                 outcome = success
                 if success
                        $("#successo").css("visibility","visible") 
+                else
+                       $("#successo").css "visibility", "hidden"
 
-            guessesCountStore = Reflux.createStore
-                init: ->
-                    @data = {guesses: 0}
-                    @listenTo setColorComponents, => 
-                        @data.guesses += 1
-                        @trigger @data
 
-                    @listenTo resetGuessColor, =>
-                        @data.guesses = 0
-                        @trigger @data
+            window.getState = 
+                colorStore.serializeState 
+            window.setState = -> 
+                stateStr = if arguments.length is 1 then arguments[0] else arguments[1];
+                colorStore.deserializeState stateStr
 
             GuessesCount = _c
                 getInitialState: ->
@@ -152,17 +160,16 @@ html
             Message = _c
                 render: ->
                     colorComponent =
-                        colorStore.data.colors[@props.colorName][@props.colorComponent]
+                        colorStore.data.colors.test[@props.colorComponent]
                     guessComponent =
                         colorStore.data.colors.guess[@props.colorComponent]
                     distance = guessComponent - colorComponent
                     maxDistance = colorStore.data.maxDistance
-                    quanto = if distance > 0 then "troppo poco" else "troppo"
-                    message = if Math.abs(distance) == Math.abs(maxDistance) and
-                                    distance isnt 0
-                                "forse hai messo un po' #{quanto} #{@props.colorName}"
+                    quanto = if distance < 0 then "chiaro" else "scuro"
+                    message = if distance and distance isnt 0 
+                                "troppo #{quanto}"
                               else 
-                                    "                         "
+                                    ""
                     _e "p", 
                         className: "color-message", message
 
@@ -195,10 +202,11 @@ html
             $(document).ready -> 
 
                 $("#prova").click -> 
-                    red = $("input#red")[0].value
-                    green = $("input#green")[0].value
-                    blue = $("input#blue")[0].value
-                    setColorComponents red, green, blue
+                    grey = Number $("input#grey")[0].value
+                    red   = grey
+                    green = grey
+                    blue  = grey
+                    setColorComponents grey, grey, grey 
 
                 $("#cambia-colore").click -> 
                     resetGuessColor()
@@ -206,48 +214,28 @@ html
                 renderTag "guesses-count", GuessesCount
             colorStore.listen render
 
-
+    p.
     p
       pixel(color-name="guess", dim='100px')
     p
-      button#cambia-colore Cambia colore
-    p
-      | Inserisci le componenti dei tre colori principali che, secondo te, servono per creare il colore da indovinare:
-    p.component(style='clear: both')
-      | ROSSO: 
-      br
-      |  
-      input.color#red(style='float:left', type='text')
-      |  
-      pixel(style='float:left', color-name="red", dim='30px')
-      |  
-      message(style="fload:left", color-name="red", color-component="r")
-    br
-    br
-    p.component(style='clear: both')
-      | VERDE: 
-      br
-      input.color#green(style='float:left', type='text')
-      pixel(style='float:left', color-name="green", ng-init='zero=0; g2=100', g='g2', r='zero', b='zero', v='g2', dim='30px')
-          
-      message(color-name="green", color-component="g")
-    br
-    br
-    p.component(style='clear: both')
-      | BLU:
-      br
-      input.color#blue(style='float:left', type='text', ng-model='b2')
-      pixel(style='float:left', color-name="blue", dim='30px')
-      message(color-name="blue", color-component="b")
-    br
-    br
+      button#cambia-colore Cambia grigio 
+    p.
+      Indovina il livello di grigio (0: nero, 255: bianco):
+      fai in modo che i <i>pixel</i> sotto diventino dello stesso colore.
     p(style='clear: both')
+      br
+      span Livello di grigio:
+      input.color#grey(type='text')
+      |  
+      |  
+    p(style='clear: both; margin-top:10px')
       button#prova Prova 
       |  e guarda che colore hai creato!
     p(style='display:flex; flex-direction:row')
       pixel(color-name="guess", dim='100px')
       |   
       pixel(style='margin-left: 20px', color-name='test', dim='100px')
+      message(color-name="red", color-component="r")
     span Tentativi: 
     span 
         guesses-count

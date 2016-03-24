@@ -11,7 +11,6 @@ html
                 body {
                     font-family: "Open Sans";
                 }
-                #console > {font-size:20px}
         script(src="lodash.js")
         script(src="jquery.js")
         script(src="node-event-emitter.js")
@@ -23,9 +22,10 @@ html
         div
             #image(style="display:inline-block")
             //#values(style="display:inline-block")
-        #lastCommandDisplay
-        #console(style="margin:10px;font-size:20px")
+        #console(style="margin:10px")
         #exsCheck
+        p#bravo(style="visibility:hidden") Ok, perfetto! Ora premi CHECK per registrare il risultato
+
         script
             :coffeescript
                 _ = require('lodash')
@@ -38,7 +38,7 @@ html
 
                 # Found no better way to share these objects
 
-                {LastCommandDisplay, Matrix, Image, Console, SS, _e, imgsData} = window.images
+                {Matrix, Image, Console2, SS, _e, imgsData} = window.images
 
                 cns = $("#console")[0]
                 img = $("#image")[0]
@@ -74,9 +74,6 @@ html
                     ss.deserializeState stateStr
 
                 render = =>
-                    React.render (_e LastCommandDisplay,
-                        {text: ss.state.lastCommand})
-                        , $("#lastCommandDisplay")[0] 
 
                     React.render (_e Image, 
                             handleClick: (coords) -> 
@@ -90,18 +87,28 @@ html
                         ), exsCheck 
 
                     outcome = checkTests tests
+                    $("p#bravo").css "visibility", 
+                        if outcome
+                            "visible"
+                        else
+                            "hidden"
 
-                React.render (_e Console, 
-                    onEnter: (x) -> 
-                        ss.exec ss.state.command
-                    onShiftEnter: (x) -> 
-                        ss.exec ss.state.command
-                    onMap: (x) ->
-                        ss.map x
-                    onChange: (e) -> ss.state.command = e.target.value 
-                    textStore: ss
-                    text: ss.state.command 
-                ), cns
+                    React.render (_e Console2, 
+                        lastCommand: ss.state.lastCommand
+                        buttons:
+                            "Enter": -> ss.exec ss.state.command
+                            "Reset": ss.resetRows
+                        error: ss.state.error
+                        onEnter: (x) -> 
+                            ss.exec ss.state.command
+                        onShiftEnter: (x) -> 
+                            ss.exec ss.state.command
+                        onMap: (x) ->
+                            ss.map x
+                        onChange: (e) -> ss.state.command = e.target.value 
+                        textStore: ss
+                        text: ss.state.command 
+                    ), cns
 
 
                 ss.on "error", (e) -> console.log e

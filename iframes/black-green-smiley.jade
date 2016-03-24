@@ -2,10 +2,10 @@ html
     head
         meta(charset="UTF8")
         link(rel="stylesheet", href="app.css")
+        script(src="https://cdn.rawgit.com/mozilla/jschannel/master/src/jschannel.js")
         style
             :less
-                #console {width:50%}
-                #console > {width:50%; font-size:20px}
+                #console {width:100%}
                 body {
                     font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
                     color: rgb(76, 76, 76);
@@ -37,22 +37,35 @@ html
         script(src="jquery.js")
         script(src="node-event-emitter.js")
         script(src="ExsCheck.js")
-        script(src="ConsoleDisplay.js")
         script(src="app.js")
     body
         div
             #image(style="display:inline-block")
-        #console(style="font-size:20px")
+        #console
         #console-display
-        h3 Obiettivi
+        h3 Obiettivo
         div.questions
             ul
                 li
                     div.question
                         span Tutti i pixel dello smiley devono essere neri
-                        .check#check-verde-basso-destra
-
+                        .check#tutti-neri
+        
         #exsCheck
+
+        #help.modal
+            .close.fa.fa-close
+            h2 Aiuti 
+            ol
+                li.hint
+                    p.q.
+                      Cosa differenzia,
+                      in termini di componenti di colore, i pixel bianchi da
+                      quelli dello smiley? I pixel bianchi hanno componenti
+                      <b>[255,255,255]</b>, mentre gli altri <b>[0,x,0]</b>,
+                      con <b>x</b> che varia. Qual è una "<b>condizione</b>"
+                      che sia vera sicuramente per tutti i pixel dello
+                      smiley, e non per quelli dello sfondo?)</p>
         script
 
             :coffeescript
@@ -60,7 +73,10 @@ html
                 $ = require('jquery')
                 ExsCheck = require 'ExsCheck'
 
-                {Matrix, Image, Console, SS, _e, Console2, imgsData} = window.images
+                {Matrix, Image, Console, modal, hintize, SS, _e, Console2, imgsData} = window.images
+
+                hintize()
+
 
                 a = 0
 
@@ -71,9 +87,7 @@ html
 
                 randomGreen = -> [0,Math.round(Math.random()*255),0] 
                 rows = ((randomGreen().map((x) -> if imgsData["smiley"][j-1][i-1] is 0 then x else 255) for i in [1..8]) for j in [1..8])
-                rows_original = 
-                #//-rows = ((randomColor().map((x) -> x) for i in [1..8]) for j in [1..8])
-                #//-rows = _.cloneDeep(imgsData["smiley"])
+                rows_original = _.cloneDeep rows 
                 
                 ss = new SS(rows)
                 ss.state.lines = []
@@ -87,24 +101,17 @@ html
                             @props.lines.map (x, i) ->
                                 p {key: i}, x
 
-                checkRosso = $("#check-rosso-alto-sinistra")
-                checkVerde = $("#check-verde-basso-destra")
-
-                $("input#rosso-alto-sinistra").on "input", -> render()
-                $("input#verde-basso-destra").on "input", -> render()
 
                 # i pixel di ss.state.rows devono essere neri dove ci sono i
                 # i pixel dello smiley 
 
                 test = -> 
-                    for y in [0..(rows.length)-1]
-                        for x in [0..(rows[0].length)-1]
+                    for y in [0..(ss.state.rows.length)-1]
+                        for x in [0..(ss.state.rows[0].length)-1]
                             console.log x, y, rows[y][x], imgsData["smiley"][y][x]
                             if imgsData["smiley"][y][x] is 0
-                                if not _.eq rows[y][x], [0,0,0] then return false
+                                if not _.eq ss.state.rows[y][x], [0,0,0] then return false
                     return true
-
-                String(ss.state.rows[0][0][0]) is $("#rosso-alto-sinistra").val()
 
                 check = React.createClass
                     render: ->
@@ -119,6 +126,12 @@ html
                                 style: {color: "red"}
                             null
 
+                outcome = false
+                window.getGrade = -> outcome
+                window.getState = ss.serializeState
+                window.setState = -> 
+                    stateStr = if arguments.length is 1 then arguments[0] else arguments[1];
+                    ss.deserializeState stateStr
 
                 render = =>
 
@@ -133,28 +146,37 @@ html
                             lines: ss.state.lines)
                         , consoleDisplay
 
-                    #/-React.render (_e ExsCheck, 
-                    #           //-tests: tests
-                    #   //-), exsCheck 
-                    
+                    React.render (_e check, {value: test()}), $(".check#tutti-neri")[0]
+                    outcome = test()
 
-                    React.render (_e check, {value: test()}), checkVerde[0]
+                    React.render (_e Console2, 
+                        error: ss.state.error
+                        lastCommand: ss.state.lastCommand
+                        buttons:
+                            "Esegui": ->
+                                res = ss.exec ss.state.command
+                                if res
+                                    ss.state.lines = [JSON.stringify(res)]
+                                ss.commitState()
+                            "Esegui su tutti": ->
+                                res = ss.map ss.state.command
+                            "Reset": ->
+                                ss.state.rows = _.cloneDeep rows_original
+                                ss.commitState()
+                            "Suggerimenti": modal($("#help")).show
+                                
+                                
 
-
-
-                React.render (_e Console2, 
-                    buttons:
-                        "Esegui su tutti": ->
+                        onEnter: (x) -> 
                             res = ss.map ss.state.command
-                    #onEnter: (x) -> 
-                    #    ss.exec ss.state.command
-                    #onShiftEnter: (x) -> 
-                    #    ss.exec ss.state.command
-                    onMap: (x) ->
-                        ss.map x
-                    onChange: (e) -> 
-                        ss.state.command = e.target.value 
-                ), cns
+                        onShiftEnter: (x) -> 
+                            res = ss.exec ss.state.command
+                            if res
+                                ss.state.lines = [JSON.stringify(res)]
+                            ss.commitState()
+                        onChange: (e) -> 
+                            ss.state.command = e.target.value 
+                    ), cns
 
                 ss.on "error", (e) -> console.log e
 
@@ -162,3 +184,6 @@ html
                     render()
 
                 render()
+
+        
+        script(src="iframe_check.js")

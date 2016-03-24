@@ -1,11 +1,11 @@
 html
     head
         meta(charset="UTF8")
+        script(src="https://cdn.rawgit.com/mozilla/jschannel/master/src/jschannel.js")
         link(rel="stylesheet", href="app.css")
+        script(src="checkTests.js")
         style
             :less
-                #console {width:50%}
-                #console > {width:50%; font-size:20px}
                 body {
                     font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
                     color: rgb(76, 76, 76);
@@ -37,12 +37,12 @@ html
         script(src="jquery.js")
         script(src="node-event-emitter.js")
         script(src="ExsCheck.js")
-        script(src="ConsoleDisplay.js")
+        #script(src="ConsoleDisplay.js")
         script(src="app.js")
     body
         div
             #image(style="display:inline-block")
-        #console(style="font-size:20px")
+        #console
         #console-display
         div.questions
             div.question
@@ -53,6 +53,10 @@ html
                 span Qual è la componente di verde del pixel in basso a destra?
                 input.input#verde-basso-destra(type="number")
                 .check#check-verde-basso-destra
+            div#bravo(style="visibility:hidden")
+                span Bene! Mi pare tu abbia capito come "vedere" i colori di un'immagine con getPixel
+                p Ora premi "CHECK" per registrare il tuo risultato...
+
 
         #exsCheck
         script
@@ -61,10 +65,16 @@ html
                 _ = require('lodash')
                 $ = require('jquery')
                 ExsCheck = require 'ExsCheck'
+                checkTests = require 'checkTests'
 
-                {Matrix, Image, Console, SS, _e, Console2, imgsData} = window.images
+                {Matrix, Image, Console2, SS, _e, Console2, imgsData} = window.images
 
                 a = 0
+
+                outcome = false
+                window.getGrade = -> outcome
+                window.setState = ->
+                window.getState = -> "{}"
 
                 cns = $("#console")[0]
                 consoleDisplay = $("#console-display")[0]
@@ -141,23 +151,35 @@ html
                     React.render (_e check, {value: testRosso()}), checkRosso[0]
                     React.render (_e check, {value: testVerde()}), checkVerde[0]
 
+                    $("#bravo").css "visibility", 
+                        if testRosso() and testVerde()
+                            "visible"
+                        else "hidden"
+
+                    outcome = testRosso() and testVerde()
 
 
-                React.render (_e Console2, 
-                    buttons:
-                        "esegui": ->
+
+                    React.render (_e Console2, 
+                        error: ss.state.error
+                        lastCommand: ss.state.lastCommand
+                        buttons:
+                            "Esegui": ->
+                                res = ss.exec ss.state.command
+                                if res
+                                    ss.state.lines = [JSON.stringify(res)]
+                                ss.commitState()
+                        onEnter: (x) -> 
+                            ss.exec ss.state.command
+                        onShiftEnter: (x) -> 
                             res = ss.exec ss.state.command
                             if res
                                 ss.state.lines = [JSON.stringify(res)]
                             ss.commitState()
-                    onEnter: (x) -> 
-                        ss.exec ss.state.command
-                    onShiftEnter: (x) -> 
-                        ss.exec ss.state.command
-                    onMap: (x) ->
-                        ss.map x
-                    onChange: (e) -> ss.state.command = e.target.value 
-                ), cns
+                        onMap: (x) ->
+                            ss.map x
+                        onChange: (e) -> ss.state.command = e.target.value 
+                    ), cns
 
                 ss.on "error", (e) -> console.log e
 
@@ -165,3 +187,5 @@ html
                     render()
 
                 render()
+
+        script(src="iframe_check.js")

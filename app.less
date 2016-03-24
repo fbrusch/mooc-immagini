@@ -3,7 +3,6 @@ body {
     font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
     color: rgb(76, 76, 76);
     width: 600px;
-    margin: auto;
 }
 
 button {
@@ -16,4 +15,40 @@ button {
 
 button:hover {
     background: rgb(200,200,200);
+}
+
+.modal {
+    position: absolute;
+    top: 5%; right:10%; left:10%;
+    background-color:#fefefe;
+    opacity: 0;
+    border-radius:5px;
+    z-index:1000;
+    border: 1px solid black;
+    padding:10px;
+    padding-left:30px;
+    color: black;
+    visibility:hidden;
+}
+
+.hint-label {
+    cursor: pointer; 
+    position:absolute;
+    transform: translate(-50%, -50%);
+    top: 50%; 
+    left: 50%;
+    font-size:2em;
+    font-weigth: bold;
+    transition: all 0.4s;
+    z-index:1000;
+}
+
+.hint-label:hover {
+    background: "red";
+}
+
+.close {
+    position: absolute;
+    right: 10px;
+    top: 10px;
 }

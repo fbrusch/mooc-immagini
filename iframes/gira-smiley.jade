@@ -14,7 +14,6 @@ html
         script(src="jquery.js")
         script(src="node-event-emitter.js")
         script(src="ExsCheck.js")
-        script(src="iframe_check.js")
         script(src="app.js")
     body
         //-your-image(data-data="smiley",data-console="true")
@@ -29,7 +28,7 @@ html
                 $ = require('jquery')
                 ExsCheck = require 'ExsCheck'
                 EventEmitter = require 'node-event-emitter'
-                {Matrix, Image, Console, SS, _e, imgsData} = window.images
+                {Matrix, Image, Console2, SS, _e, imgsData} = window.images
                 window.metronome = new EventEmitter()
                 a = 0
                 setInterval (-> window.metronome.emit "tick", a++), 1000
@@ -57,13 +56,18 @@ html
                 #    channel.bind "getGrade",  window.getGrade 
                 #    channel.bind "getState",  window.getState 
 
-                outcome = false
-                window.getGrade = -> outcome
+                window.outcome = false
 
 
                 rows = _.cloneDeep(imgsData["smiley"])
 
                 ss = new SS(rows)
+
+                window.getGrade = -> window.outcome
+                window.getState = ss.serializeState
+                window.setState = -> 
+                    stateStr = if arguments.length is 1 then arguments[0] else arguments[1]
+                    ss.deserializeState stateStr
 
                 tests =  
                     [
@@ -71,7 +75,7 @@ html
                             display: "Fai in modo che lo smiley sorrida verso destra.."
                             success: _("Bravissimo!!".split(''))
                                 .reverse().value().join('') + 
-                                " Ora premi CHECK per registrare il tuo successo!"
+                                " :) Ora premi CHECK per registrare il tuo successo!"
                            
                             test: -> 
                                 cols = rows[0].length
@@ -90,6 +94,11 @@ html
                             selectedPixel: ss.state.selectedPixel
                             rows: ss.state.rows )
                         , img
+                    React.render (_e Console2, 
+                            buttons:
+                                reset: ss.resetRows
+                            noInput: true
+                    ), cns
                     React.render (_e ExsCheck, 
                                 tests: tests
                                 setOutcome: (x) ->
@@ -104,3 +113,4 @@ html
                     render()
 
                 render()
+        script(src="iframe_check.js")

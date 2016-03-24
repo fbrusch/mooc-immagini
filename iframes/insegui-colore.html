@@ -1,0 +1,36 @@
+<p>Quindi: ogni "<b>tripletta</b>" (r,g,b) di numeri descrive un colore: quello ottenuto "sommando" quantità <b>r</b> di rosso con una <b>g</b> di verde e una <b>b</b> di blu.</p>
+<p>Chiediamoci allora, come abbiamo fatto per il grigio, se è possibile invece, dato un colore, ottenere la tripletta di numeri che lo rappresenta...</p>
+
+<p><pixel ng-init="r=randInt(255); g=randInt(255); b=randInt(255)" r="r" g="g" b="b" dim="100px"></pixel></p>
+
+<p><button ng-click="count=0; r=randInt(255); g=randInt(255); b=randInt(255);"> Prova con un altro colore!</button></p>
+
+<p>Inserisci le componenti dei tre colori principali che, secondo te, servono per creare il colore da indovinare:</p>
+
+<p style="clear: both" >ROSSO: <br> <input style="float:left" type="text" ng-model="r2"> <pixel style="float:left" ng-init="zero=0; r2=100" g="zero" r="r2" b="zero" v="r2" dim="30px"></pixel> <span style="float:left" ng-show="amIMax(r1-r,b1-b,g1-g) && count>0 && r1!=r"> &nbsp; ... forse hai messo un po' troppo <span ng-show="r1<r">poco</span> rosso!
+</p>
+
+<br>
+<br><p style="clear: both">VERDE: <br><input style="float:left" type="text" ng-model="g2">
+<pixel style="float:left" ng-init="zero=0; g2=100" g="g2" r="zero" b="zero" v="g2" dim="30px"></pixel>
+ <span style="float:left" ng-show="amIMax(g1-g,b1-b,r1-r) && count>0 && g1!=g"> &nbsp; ... forse hai messo un po' troppo <span ng-show="g1<g">poco</span> verde!
+</p>
+
+<br>
+<br><p style="clear: both">BLU:<br><input style="float:left" type="text" ng-model="b2">
+<pixel style="float:left" ng-init="zero=0; b2=100" g="zero" r="zero" b="b2" v="b2" dim="30px"></pixel>
+<span style="float:left" ng-show="amIMax(b1-b,g1-g,r1-r) && count>0 && b1!=b"> &nbsp; ... forse hai messo un po' troppo <span ng-show="b1<b">poco</span> blu!
+</p>
+
+<br>
+<br><p style="clear: both"><button ng-click="b1=b2;g1=g2;r1=r2;count=count+1">Prova </button> con queste componenti e guarda che colore hai creato!</p>
+
+<p style="display:flex; flex-direction:row">
+  <pixel r="r" g="g" b="b" dim="100px"></pixel>
+  <pixel style="margin-left: 20px", ng-init="r1=0;g1=0;b1=0" r="r1" g="g1" b="b1" dim="100px"></pixel>
+</p>
+
+<p ng-show="count>0"> Tentativi: -$ count $- </p>
+<p ng-if="count>25" ng-init="count=0"> Attenzione! Hai già sbagliato -$ $parent.count $- volte! sei un po' distratto! </p>
+
+<p ng-show="r1==r && b1==b && g1==g"> Bravo! Beccato!</p>

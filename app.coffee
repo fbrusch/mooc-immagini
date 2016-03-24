@@ -17,19 +17,59 @@ setLastCommand = Reflux.createAction()
 selectPixel = Reflux.createAction()
 setPixel = Reflux.createAction()
 
+hintize = ->
+    hintsLen = $(".hint").length
+    $(".hint").each (index) ->
+        $(@).wrap $("<div></div>").css({position: "relative"})
+
+        label = $("<div>")
+            .addClass "hint-label"
+            .text("Suggerimento #{if hintsLen > 1 then index+1 else ''}")
+
+        $(@).before label
+        $(@).css {"opacity":0.07, "background-color":"grey"}
+        elem = $(@)
+        label.click ->
+            elem.css "background-color", "white"
+            label.css {visibility:"hidden"}
+            label.animate {opacity:0}, 0, ->
+                elem.animate
+                        opacity: 1
+                        "background-color": "white"
+                    , 200 
+
+modal = (elem) ->
+
+    show = -> 
+        elem.css "visibility", "visible"
+        elem.animate {opacity:0.95, 0.2}
+
+    close = ->
+        elem.animate {opacity:0}, 0.2, ->
+            elem.css "visibility", "hidden"
+
+    elem.find(".close").click close
+
+    return {show, close}
+
+LastCommandDisplay = _c 
+    render: -> _e "p",
+        style:
+            fontFamily: "monospace"
+    , @props.text 
+
 Pixel = _c
     displayName: "Pixel"
     getDefaultProps: ->
         height: "10px"
         width: "10px"
         color: [0,255,0]
-    #shouldComponentUpdate: (newProps)->
-        #true
-        ##newProps.selected isnt @props.selected
+
     componentDidUpdate: ->
         
     selectMe: ->
         @props.onSelect @props.coords[0], @props.coords[1]
+
     render: ->
         switch (typeof @props.color)
             when "number"
@@ -142,8 +182,22 @@ loadSubImg = (src, x, y, h, w) ->
 # it should have an element, a state, a console, some methods that
 # act upon the state
 
+ErrorDisplay = _c
+    render: ->
+        _e "p",
+            style:
+                color: "red"
+            , @props.error?.toString()
+
 Console2 = _c
+    getInitialState: -> {commands: [], text: ""}
+    componentDidMount: ->
+        resetConsole.listen =>
+            @setState {text: ""}
+
     getInitialState: -> {commands: []}
+    handleTextChange: (e) ->
+        @setState {text: e.target.value}
     enter: ->
         text = React.findDOMNode(@refs.text).value
         @setState {commands: @state.commands + [text]}
@@ -154,23 +208,33 @@ Console2 = _c
         @props.onMap text 
 
     render: ->
-        {div, textarea, p, button} = React.DOM
-        div null,
-            #(p null,
-                #@state.commands
-            #)
-            (textarea
+        {div, input, textarea, p, button} = React.DOM
+        div {style: {width: "100%"}}, [
+            (_e ErrorDisplay, {error: @props.error})
+            , (_e LastCommandDisplay, 
+                text: @props.lastCommand)
+            , (input
+                type: "text"
                 style:
                     resize: "none"
-                    height:"5em"
                     width:"100%"
                     display: "block"
                     fontFamily: "monospace"
-                onChange: @props.onChange
+                    length: "100%"
+                    fontSize: "14px"
+                    padding: "10px"
+                    
+                onChange: (e) => 
+                    @handleTextChange e
+                    @props.onChange e
                 ref: "text"
+                value: @state.text
                 onKeyDown: (e) =>
                     if e.keyCode is 13
-                        @props.onShiftEnter? e)
+                        @props.onShiftEnter? e
+                    if e.key is "ArrowUp"
+                        @setState {text: @props.lastCommand}
+            ) if not @props.noInput
             , _.keys(@props.buttons).map (k) =>
                 (button
                     key: k
@@ -179,6 +243,20 @@ Console2 = _c
                         marginBottom:10
                     onClick: @props.buttons[k]
                     , k)
+        ]
+
+
+Modal = _c
+
+    getInitialState: -> 
+        text: undefined
+
+    componentDidMount: ->
+        @props.showMessageAction.listen? (text) =>
+            @setState {text}
+
+    render: ->
+        React.DOM.p {}, @state.text
 
 Console = _c
     getInitialState: -> {commands: [], text: ""}
@@ -266,14 +344,13 @@ ImageCanvas = _c
             width: @props.rows[0]?.length
 
 
-LastCommandDisplay = _c 
-    render: -> _e "p", null, @props.text 
             #@props.text? || ""
 
 SS = class extends EventEmitter
 
     constructor: (rows) ->
         @state = {rows: rows}
+        @state.original_rows = _.cloneDeep rows
 
         resetConsole.listen =>
             @state.command = ""
@@ -290,18 +367,25 @@ SS = class extends EventEmitter
         setPixel.listen (rgb) =>
             @setPixel @selectedPixel, rgb
 
-    serializeState: => 
-        debugger
-        JSON.stringify @state
+    resetRows: =>
+        @state.rows = _.cloneDeep @state.original_rows
+        @state.selectedPixel = null
+        @emit "change"
+
+    serializeState: (fields = -> true) =>
+        JSON.stringify _.pick @state, fields
 
     deserializeState: (str) ->
         try
             _.assign @state, JSON.parse str
             @emit "change", @state
-        catch
+        catch e
+            console.log e
 
     commitState: ->
         @emit "change", @state
+
+    clearError: => @state.error = null
 
     exec: (cmd) ->
         img = this
@@ -312,32 +396,45 @@ SS = class extends EventEmitter
             # last command
             resetConsole()
             setLastCommand cmd
+            @clearError()
             @commitState()
             return res
         catch e
+            @state.error = e
             @emit "error", e
+            @emit "change"
 
     invertPixel: (x, y) ->
        @state.rows[x][y] = Math.abs (255- @state.rows[x][y])
        @commitState()
 
+    setPixelxy: (x, y, rgb) ->
+        @state.rows[x][y] = rgb
+        @commitState()
+
     map: (cmd, cb) -> 
             img = this
             try
                 rows = @state.rows
+
                 _img = (x, y) ->
-                    getPixel: -> img.state.rows[y][x]
-                    setPixel: (rgb) -> img.state.rows[y][x] = rgb
-                @state.rows.map (r, i) =>
-                    r.map (x, j) =>
-                        try
-                            f = new Function("img", cmd)
-                            f _img(j, i)
+                    getPixel: -> rows[y][x]
+                    setPixel: (rgb) -> rows[y][x] = rgb
+
+                f = new Function("img", cmd)
+
+                for r, y in rows
+                    for p, x in r
+                        f _img(x, y)
+                resetConsole()
+                setLastCommand cmd
+                @clearError()
                 @commitState()
-                if cb
-                    cb()
+                cb?()
             catch e
-                @emit "error", e 
+                @state.error = e
+                @emit "change"
+                @emit "error", e
 
     selectPixel: (x,y) ->
         img = this
@@ -417,6 +514,7 @@ $("my-canvas").each ->
 
 module.exports =
     createPhotoshop: createPhotoshop
+    Reflux: Reflux
     React: React
     SS: SS
     _e: _e
@@ -431,3 +529,6 @@ module.exports =
     loadSubImg: loadSubImg
     Matrix: Matrix
     LastCommandDisplay: LastCommandDisplay
+    Modal: Modal
+    modal: modal
+    hintize: hintize

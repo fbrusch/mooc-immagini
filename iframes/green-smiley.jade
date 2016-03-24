@@ -2,10 +2,9 @@ html
     head
         meta(charset="UTF8")
         link(rel="stylesheet", href="app.css")
-        style
+        script(src="https://cdn.rawgit.com/mozilla/jschannel/master/src/jschannel.js")
+        //-style
             :less
-                #console {width:50%}
-                #console > {width:50%; font-size:20px}
                 body {
                     font-family: 'Open Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
                     color: rgb(76, 76, 76);
@@ -29,7 +28,6 @@ html
                     padding:10px;
                     background-color: lightgrey;
                     font-family: monospace;
-
                     }
                 
         link(rel="stylesheet",href="font-awesome/css/font-awesome.min.css")
@@ -42,9 +40,9 @@ html
     body
         div
             #image(style="display:inline-block")
-        #console(style="font-size:20px")
+        #console
         #console-display
-        h3 Obiettivi
+        h3 Obiettivo
         div.questions
             ul
                 li
@@ -52,6 +50,12 @@ html
                         span Tutti i pixel devono avere la componente verde al massimo (255)
                         .check#check-verde-basso-destra
 
+        div#bravo(style="visibility=hidden")
+            p.
+                Ottimo! Hai rinverdito lo smiley! Ora premi "CHECK" per registrare
+                il risultato!
+            
+            
         #exsCheck
         script
 
@@ -71,14 +75,18 @@ html
 
                 randomColor = -> Math.round(Math.random()*255) for i in [0,1,2]
                 rows = ((randomColor().map((x) -> if imgsData["smiley"][j-1][i-1] is 0 then x else 255) for i in [1..8]) for j in [1..8])
-                rows_original = 
-                #//-rows = ((randomColor().map((x) -> x) for i in [1..8]) for j in [1..8])
-                #//-rows = _.cloneDeep(imgsData["smiley"])
+                rows_original = _.cloneDeep rows
                 
                 ss = new SS(rows)
                 ss.state.lines = []
 
-                ss.on "error", (e) -> alert e
+                outcome = false 
+                window.getGrade = -> outcome
+                window.getState = ss.serializeState
+                window.setState = -> 
+                    stateStr = if arguments.length is 1 then arguments[0] else arguments[1];
+                    ss.deserializeState stateStr
+
 
                 ConsoleDisplay = React.createClass
                     render: ->
@@ -97,7 +105,7 @@ html
                 # verde al massimo e le altre uguali allo smiley
 
                 test = -> 
-                    for y in rows
+                    for y in ss.state.rows
                         for x in y
                             if x[1] isnt 255 then return false
                     return true
@@ -131,28 +139,33 @@ html
                             lines: ss.state.lines)
                         , consoleDisplay
 
-                    #/-React.render (_e ExsCheck, 
-                    #           //-tests: tests
-                    #   //-), exsCheck 
-                    
-
                     React.render (_e check, {value: test()}), checkVerde[0]
+                    outcome = test()
+                    $("#bravo").css "visibility", 
+                        if outcome
+                            "visible"
+                        else "hidden"
 
 
 
-                React.render (_e Console2, 
-                    buttons:
-                        "Esegui su tutti": ->
-                            res = ss.map ss.state.command
-                    onEnter: (x) -> 
-                        ss.exec ss.state.command
-                    onShiftEnter: (x) -> 
-                        ss.exec ss.state.command
-                    onMap: (x) ->
-                        ss.map x
-                    onChange: (e) -> 
-                        ss.state.command = e.target.value 
-                ), cns
+                    React.render (_e Console2, 
+                        lastCommand: ss.state.lastCommand
+                        error: ss.state.error
+                        buttons:
+                            "Esegui su tutti": ->
+                                res = ss.map ss.state.command
+                            "Reset": ->
+                                ss.state.rows = _.cloneDeep rows_original
+                                ss.commitState()
+                        onEnter: (x) -> 
+                            ss.exec ss.state.command
+                        onShiftEnter: (x) -> 
+                            ss.map ss.state.command
+                        onMap: (x) ->
+                            ss.map x
+                        onChange: (e) -> 
+                            ss.state.command = e.target.value 
+                    ), cns
 
                 ss.on "error", (e) -> console.log e
 
@@ -160,3 +173,4 @@ html
                     render()
 
                 render()
+        script(src="iframe_check.js")
