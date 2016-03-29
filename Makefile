@@ -4,6 +4,7 @@ include Make.config
 
 UNAME = $(shell uname)
 
+dist = dist
 devbin = ./node_modules/.bin
 browserify = $(devbin)/browserify --t coffeeify
 dist/imgs: imgs
@@ -15,7 +16,11 @@ build: node_modules dist/imgs assets app app.css iframes ExsCheck dist/iframe_ch
 app: $(dist)/app.js
 app.css: $(dist)/app.css
 
-assets: font-awesome dist/jquery.js
+assets: font-awesome dist/jquery.js vendor-libs dist/node-event-emitter.js \
+		dist/lodash.js
+
+serve:
+	cd dist && python -m http.server
 
 font-awesome:
 	cp -R ./node_modules/font-awesome dist
@@ -25,12 +30,15 @@ define modulize
 endef
 
 $(dist)/lodash.js:
+	@mkdir -p $(dir $@)
 	$(call modulize, "lodash")
 
 $(dist)/jquery.js:
+	@mkdir -p $(dir $@)
 	$(call modulize, "jquery")
 
 $(dist)/node-event-emitter.js:
+	@mkdir -p $(dir $@)
 	$(call modulize, "node-event-emitter")
 
 $(dist)/ExsCheck.js: ExsCheck.coffee

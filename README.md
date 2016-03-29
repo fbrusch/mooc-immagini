@@ -1,25 +1,19 @@
-# app-template
-Template for html app with nodemon, livereload, browserify, coffee
+## Widget per la sezione `immagini` del *MOOC* [Il linguaggio nascosto delle
+ cose"](https://www.pok.polimi.it/courses/course-v1:Polimi+COD101+2016_M3/about)
+ 
+### Requisiti
 
-Usage: 
+    - node
+    - python > 3.3
+ 
+### Per installare
 
-    git checkout -b master
-    mkdir dist
-    npm install
-    make livereload &
-    make watch &
-    make open
+     make build
+     make serve
+     
+
+Quindi aprire una finestra di Chrome all'indirizzo http://localhost:8000
+
+
   
-Edit index.jade and app.coffee, and you're good to go!
-
-If you want to change something in the template: 
-    
-    git checkout template
-
-    [your modifications]
-
-    [git add + commit]
-
-    git checkout master
-    git rebase template
-
+ 
