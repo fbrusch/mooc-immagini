@@ -1,25 +1,21 @@
 include Make.config
 
-dist/immagini.html: immagini.jade
-	node_modules/.bin/jade -P immagini.jade -o dist
-
 .PHONY: build open init iframes
 
 UNAME = $(shell uname)
 
-
-dist = dist
-#livereload_port = 45870
 devbin = ./node_modules/.bin
 browserify = $(devbin)/browserify --t coffeeify
+dist/imgs: imgs
+	@mkdir -p $(dir $@)
+	cp -r $< $@
 
-build: app index app.css iframes ExsCheck dist/iframe_check.js dist/checkTests.js
+build: node_modules dist/imgs assets app app.css iframes ExsCheck dist/iframe_check.js dist/checkTests.js
 
-index: $(dist)/index.html
 app: $(dist)/app.js
 app.css: $(dist)/app.css
 
-assets: font-awesome
+assets: font-awesome dist/jquery.js
 
 font-awesome:
 	cp -R ./node_modules/font-awesome dist
@@ -38,7 +34,6 @@ $(dist)/node-event-emitter.js:
 	$(call modulize, "node-event-emitter")
 
 $(dist)/ExsCheck.js: ExsCheck.coffee
-	#coffee -bc $<
 	$(devbin)/browserify --t coffeeify -r ./ExsCheck.coffee:ExsCheck >$@
 
 $(dist)/checkTests.js: checkTests.coffee
@@ -46,30 +41,22 @@ $(dist)/checkTests.js: checkTests.coffee
 	$(devbin)/browserify --t coffeeify -r ./checkTests.coffee:checkTests >$@
 
 $(dist)/%.js: %.coffee
-	coffee -bc -o $(dir $@) $<
-	#$(devbin)/browserify --t coffeeify -r ./ExsCheck.coffee:ExsCheck >$@
+	@mkdir -p $(dir $@)
+	$(devbin)/browserify --standalone images --t browserify-css --t coffeeify --debug $< -o $@
 
 ExsCheck: $(dist)/ExsCheck.js
-$(dist)/app.css: app.less
+
+$(dist)/%.css: %.less
 	$(devbin)/lessc $< >$@
 
 iframes:
 	$(devbin)/jade -P iframes/* -o $(dist)
 
-init: 
-	git checkout -b master
-	mkdir dist
+node_modules: package.json
 	npm install
 
-$(dist)/app.js: app.coffee
-	$(devbin)/browserify --standalone images --t browserify-css --t coffeeify --debug $< -o $@
-
-$(dist)/index.html: index.jade
-	$(devbin)/jade -O \
-		"{livereloadUrl:'http://localhost:$(livereload_port)/livereload.js'}" \
-		-P index.jade -o dist
-
 open: $(dist)/index.html
+
 ifeq ($(UNAME), Linux)
 	xdg-open $<
 else
